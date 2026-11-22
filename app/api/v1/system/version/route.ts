@@ -60,6 +60,48 @@ export async function GET(_req: NextRequest): Promise<Response> {
   }
 
   const now = new Date();
+
+  // `pnpm dev` não tem um agente de host: a versão confirmada só existe no
+  // stack self-host, onde app/worker/scheduler são observados pelo agente.
+  // No compose local, `APP_VERSION=local` identifica o mesmo modo mesmo com
+  // `NODE_ENV=production`. Não derive isso apenas de `NODE_ENV` para produção:
+  // o fallback não pode esconder uma versão real nem liberar atualização ali.
+  const desenvolvimentoLocal =
+    process.env.NODE_ENV === "development" || process.env.APP_VERSION === "local";
+  if (desenvolvimentoLocal) {
+    const identidadeLocal = runtimeIdentity(null, null, now);
+    if (!user.is_platform_admin) {
+      return ok({
+        current_version: "Desenvolvimento",
+        is_owner: false,
+        identity: identidadeLocal,
+      });
+    }
+
+    return ok({
+      current_version: "Desenvolvimento",
+      identity: identidadeLocal,
+      runtime_services: null,
+      official_latest_version: "",
+      pending_release_version: null,
+      manual_reconciliation_required: false,
+      is_owner: true,
+      force_update_supported: false,
+      smtp_configured: !(await semSmtpNaInstalacao()),
+      latest_version: "",
+      update_available: false,
+      off_release: false,
+      compare_failed: true,
+      has_known_release: false,
+      agent_online: false,
+      agent_stale: true,
+      agent_last_seen_at: null,
+      just_updated: false,
+      notes: null,
+      run: null,
+    });
+  }
+
   const identity = runtimeIdentity(version?.runtime_confirmation, version?.agent_last_seen_at, now);
   const observation = runtimeConfirmationSchema.safeParse(version?.runtime_confirmation);
   const current =

@@ -20,6 +20,7 @@ services:
     env_file: ${LOCAL_ENV_FILE:-.env.local}
     environment:
       WAHA_API_BASE_URL: http://waha:3000
+      UPSTASH_REDIS_REST_URL: http://srh:80
       # O `worker` abaixo drena o event_log; ver docker-compose.prod.yml.
       EVENT_LOG_WORKER_DRAINS: ${EVENT_LOG_WORKER_DRAINS:-true}
     ports:
@@ -50,6 +51,7 @@ services:
     env_file: ${LOCAL_ENV_FILE:-.env.local}
     environment:
       WAHA_API_BASE_URL: http://waha:3000
+      UPSTASH_REDIS_REST_URL: http://srh:80
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -174,6 +176,10 @@ services:
       SRH_MODE: env
       SRH_TOKEN: ${SRH_TOKEN}
       SRH_CONNECTION_STRING: redis://redis:6379
+    # O `pnpm dev` roda no host. Publica o gateway HTTP só no loopback para
+    # esse processo; containers do stack usam `http://srh:80` pela rede interna.
+    ports:
+      - "127.0.0.1:8079:80"
     depends_on:
       redis:
         condition: service_healthy
